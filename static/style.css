@@ -16,7 +16,7 @@ These create a consistent design system across the entire application
     --primary-hover: #1d4ed8;          /* Darker blue for hover states */
     --success-color: #10b981;          /* Green for completed items */
     --danger-color: #ef4444;           /* Red for delete buttons */
-    --background-color: #f8fafc;       /* Light gray page background */
+    --background-color: #f4f1e7;       /* Yellow-gray page background */
     --surface-color: #ffffff;          /* White for cards/containers */
     --text-primary: #1e293b;           /* Dark gray for main text */
     --text-secondary: #64748b;         /* Medium gray for secondary text */
