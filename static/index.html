@@ -5,70 +5,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todo List App</title>
     <link rel="stylesheet" href="static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>My Todo List</h1>
-            <p>Stay organized and get things done!</p>
-        </header>
+    <div class="app-container">
+        <!-- Title -->
+        <h1 class="app-title">My Todo List</h1>
+        
+        <!-- Subtitle -->
+        <p class="app-subtitle">Stay organized and get things done!</p>
+        
+        <!-- Input section -->
+        <div class="input-section">
+            <form id="add-todo-form" class="input-form">
+                <input 
+                    type="text" 
+                    id="todo-input" 
+                    placeholder="What needs to be done?" 
+                    required
+                    maxlength="200"
+                    aria-label="New todo item"
+                    class="todo-input"
+                >
+            </form>
+            <button type="submit" form="add-todo-form" class="add-button" aria-label="Add todo">
+                <span>Add</span>
+            </button>
+        </div>
 
-        <main>
-            <!-- Add new todo form -->
-            <section class="add-todo-section">
-                <form id="add-todo-form" class="add-todo-form">
-                    <div class="input-group">
-                        <input 
-                            type="text" 
-                            id="todo-input" 
-                            placeholder="What needs to be done?" 
-                            required
-                            maxlength="200"
-                            aria-label="New todo item"
-                        >
-                        <button type="submit" class="add-btn" aria-label="Add todo">
-                            <span>Add</span>
-                        </button>
-                    </div>
-                </form>
-            </section>
+        <!-- Loading indicator -->
+        <div id="loading" class="loading hidden" aria-live="polite">
+            Loading todos...
+        </div>
 
-            <!-- Loading indicator -->
-            <div id="loading" class="loading hidden" aria-live="polite">
-                Loading todos...
+        <!-- Error message -->
+        <div id="error-message" class="error-message hidden" role="alert" aria-live="assertive">
+        </div>
+
+        <!-- Todo list -->
+        <div class="todos-container">
+            <ul id="todos-list" class="todos-list" role="list">
+                <!-- Todo items will be dynamically inserted here -->
+            </ul>
+
+            <!-- Empty state -->
+            <div id="empty-state" class="empty-state">
+                <div class="empty-icon">📝</div>
+                <h3>No todos yet</h3>
+                <p>Add your first task above to get started!</p>
             </div>
-
-            <!-- Error message -->
-            <div id="error-message" class="error-message hidden" role="alert" aria-live="assertive">
-            </div>
-
-            <!-- Todo list -->
-            <section class="todos-section">
-                <div class="todos-header">
-                    <h2>Your Tasks</h2>
-                    <div class="todos-stats">
-                        <span id="total-count">0 total</span>
-                        <span class="separator">•</span>
-                        <span id="completed-count">0 completed</span>
-                    </div>
-                </div>
-
-                <ul id="todos-list" class="todos-list" role="list">
-                    <!-- Todo items will be dynamically inserted here -->
-                </ul>
-
-                <!-- Empty state -->
-                <div id="empty-state" class="empty-state">
-                    <div class="empty-icon">📝</div>
-                    <h3>No todos yet</h3>
-                    <p>Add your first task above to get started!</p>
-                </div>
-            </section>
-        </main>
-
-        <footer>
-            <p>Built with FastAPI and vanilla JavaScript</p>
-        </footer>
+        </div>
     </div>
 
     <!--
@@ -78,26 +66,31 @@
     -->
     <template id="todo-item-template">
         <li class="todo-item" role="listitem">
-            <div class="todo-content">
-                <input type="checkbox" class="todo-checkbox" aria-label="Mark as complete">
-                <span class="todo-text"></span>
-            </div>
-            <div class="todo-actions">
-                <button class="edit-btn" aria-label="Edit todo">
-                    <span>Edit</span>
+            <div class="todo-item-content">
+                <!-- Custom completion icon -->
+                <button class="completion-icon" aria-label="Toggle completion">
+                    <svg class="completion-svg" viewBox="0 0 15 15" fill="none">
+                        <circle cx="7.5" cy="7.5" r="7.5" class="outer-circle"/>
+                        <circle cx="7.5" cy="7.5" r="4.5" class="inner-circle"/>
+                    </svg>
                 </button>
-                <button class="delete-btn" aria-label="Delete todo">
-                    <span>Delete</span>
-                </button>
-            </div>
-            <!-- Edit form (initially hidden) -->
-            <form class="edit-form hidden">
-                <input type="text" class="edit-input" required maxlength="200">
-                <div class="edit-actions">
-                    <button type="submit" class="save-btn">Save</button>
-                    <button type="button" class="cancel-btn">Cancel</button>
+                
+                <!-- Todo text / edit input -->
+                <div class="todo-text-container">
+                    <span class="todo-text"></span>
+                    <input type="text" class="todo-edit-input hidden" required maxlength="200">
                 </div>
-            </form>
+                
+                <!-- Delete button (shown on hover) -->
+                <button class="delete-btn" aria-label="Delete todo">
+                    <svg class="delete-svg" viewBox="0 0 16 16" fill="none">
+                        <path class="trash-body" stroke="#D9D9D9" d="M3.51074 0.5H12.4893C14.0253 0.500064 15.1984 1.8724 14.959 3.38965L13.3799 13.3896C13.188 14.6048 12.1403 15.5 10.9102 15.5H5.08984C3.85966 15.5 2.81198 14.6048 2.62012 13.3896L1.04102 3.38965C0.801645 1.8724 1.9747 0.500064 3.51074 0.5Z"/>
+                        <path class="trash-line" stroke="#D9D9D9" stroke-linecap="round" d="M4.21053 5.89474L5.05263 10.1053"/>
+                        <path class="trash-line" stroke="#D9D9D9" stroke-linecap="round" d="M8 5.05263L8 10.1053"/>
+                        <path class="trash-line" stroke="#D9D9D9" stroke-linecap="round" d="M11.7895 5.89474L10.9474 10.1053"/>
+                    </svg>
+                </button>
+            </div>
         </li>
     </template>
 

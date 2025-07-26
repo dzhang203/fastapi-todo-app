@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Test</title>
+    <style>
+        body { 
+            font-family: 'Anonymous Pro', monospace;
+            background-color: #f3f1e7;
+            padding: 20px;
+        }
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 25px;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Test</h1>
+        <p>If you can see this with the cream background and Anonymous Pro font, the CSS is working.</p>
+        
+        <button onclick="testAPI()">Test API</button>
+        <div id="result"></div>
+    </div>
+    
+    <script>
+        async function testAPI() {
+            const result = document.getElementById('result');
+            try {
+                const response = await fetch('/todos/');
+                const data = await response.json();
+                result.innerHTML = `<p>✅ API works! Found ${data.length} todos</p>`;
+            } catch (error) {
+                result.innerHTML = `<p>❌ API error: ${error.message}</p>`;
+            }
+        }
+        
+        console.log('Simple test page loaded');
+    </script>
+</body>
+</html>

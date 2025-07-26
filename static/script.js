@@ -18,8 +18,6 @@ const todosList = document.getElementById('todos-list');
 const loadingDiv = document.getElementById('loading');
 const errorDiv = document.getElementById('error-message');
 const emptyState = document.getElementById('empty-state');
-const totalCountSpan = document.getElementById('total-count');
-const completedCountSpan = document.getElementById('completed-count');
 const todoTemplate = document.getElementById('todo-item-template');
 
 // Application State - like global variables in Python
@@ -227,25 +225,19 @@ async function handleToggleComplete(todoId, completed) {
 function handleEditTodo(todoId) {
     const todoElement = document.querySelector(`[data-todo-id="${todoId}"]`);
     const todoText = todoElement.querySelector('.todo-text');
-    const editForm = todoElement.querySelector('.edit-form');
-    const editInput = todoElement.querySelector('.edit-input');
+    const editInput = todoElement.querySelector('.todo-edit-input');
     
-    // Hide the todo text and show the edit form
-    todoText.style.display = 'none';
-    editForm.style.display = 'block';
+    // Hide the todo text and show the edit input
+    todoText.classList.add('hidden');
+    editInput.classList.remove('hidden');
     
     // Populate the edit input with current text and focus it
     editInput.value = todoText.textContent;
     editInput.focus();
     editInput.select();  // Select all text for easy editing
     
-    // Set up event listeners for the edit form
-    const saveBtn = editForm.querySelector('.save-btn');
-    const cancelBtn = editForm.querySelector('.cancel-btn');
-    
-    // Save changes
-    saveBtn.onclick = async function(e) {
-        e.preventDefault();
+    // Function to save changes
+    async function saveChanges() {
         const newContent = editInput.value.trim();
         
         if (!newContent) {
@@ -259,31 +251,61 @@ function handleEditTodo(todoId) {
         } catch (error) {
             // Error already handled in updateTodo
         }
-    };
+    }
     
-    // Cancel editing
-    cancelBtn.onclick = function(e) {
-        e.preventDefault();
+    // Function to cancel editing
+    function cancelEdit() {
         hideEditForm(todoElement);
-    };
+    }
     
-    // Save on Enter key, cancel on Escape key
+    // Handle Enter key to save, Escape key to cancel
     editInput.onkeydown = function(e) {
         if (e.key === 'Enter') {
-            saveBtn.click();
+            e.preventDefault();
+            saveChanges();
         } else if (e.key === 'Escape') {
-            cancelBtn.click();
+            e.preventDefault();
+            cancelEdit();
         }
+    };
+    
+    // Handle click outside to save changes
+    function handleClickOutside(e) {
+        // Check if click is outside the edit input
+        if (!editInput.contains(e.target) && e.target !== todoText) {
+            saveChanges();
+            // Remove the event listener after use
+            document.removeEventListener('click', handleClickOutside);
+        }
+    }
+    
+    // Add click outside listener after a short delay to prevent immediate trigger
+    setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+    }, 100);
+    
+    // Handle blur event (when input loses focus) as backup
+    editInput.onblur = function() {
+        // Small delay to allow click events to process first
+        setTimeout(() => {
+            if (!editInput.classList.contains('hidden')) {
+                saveChanges();
+            }
+        }, 150);
     };
 }
 
-// Helper function to hide edit form and show todo text
+// Helper function to hide edit input and show todo text
 function hideEditForm(todoElement) {
     const todoText = todoElement.querySelector('.todo-text');
-    const editForm = todoElement.querySelector('.edit-form');
+    const editInput = todoElement.querySelector('.todo-edit-input');
     
-    todoText.style.display = '';
-    editForm.style.display = 'none';
+    todoText.classList.remove('hidden');
+    editInput.classList.add('hidden');
+    
+    // Clean up event listeners to prevent memory leaks
+    editInput.onkeydown = null;
+    editInput.onblur = null;
 }
 
 // Handle deleting a todo item
@@ -330,14 +352,13 @@ function createTodoElement(todo) {
     
     // Get references to elements within the cloned template
     const listItem = todoElement.querySelector('.todo-item');
-    const checkbox = todoElement.querySelector('.todo-checkbox');
+    const completionIcon = todoElement.querySelector('.completion-icon');
     const todoText = todoElement.querySelector('.todo-text');
-    const editBtn = todoElement.querySelector('.edit-btn');
+    const todoEditInput = todoElement.querySelector('.todo-edit-input');
     const deleteBtn = todoElement.querySelector('.delete-btn');
     
     // Set up the todo item with data
     listItem.setAttribute('data-todo-id', todo.id);  // For easy lookup later
-    checkbox.checked = todo.completed;
     todoText.textContent = todo.content;
     
     // Add completed class if todo is done - for CSS styling
@@ -346,11 +367,12 @@ function createTodoElement(todo) {
     }
     
     // Set up event listeners for this specific todo
-    checkbox.addEventListener('change', () => {
-        handleToggleComplete(todo.id, checkbox.checked);
+    completionIcon.addEventListener('click', () => {
+        handleToggleComplete(todo.id, !todo.completed);
     });
     
-    editBtn.addEventListener('click', () => {
+    // Click-to-edit functionality - click on text to start editing
+    todoText.addEventListener('click', () => {
         handleEditTodo(todo.id);
     });
     
@@ -363,11 +385,13 @@ function createTodoElement(todo) {
 
 // Update the statistics display - like calculating summary statistics
 function updateStats() {
+    // Stats removed from new design
+    // Could be used for other purposes like updating document title
     const total = todos.length;
     const completed = todos.filter(todo => todo.completed).length;
     
-    totalCountSpan.textContent = `${total} total`;
-    completedCountSpan.textContent = `${completed} completed`;
+    // Update document title with stats
+    document.title = `Todo List App (${completed}/${total})`;
 }
 
 /*
