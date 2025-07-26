@@ -2,6 +2,9 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 
@@ -55,6 +58,18 @@ async def lifespan(app: FastAPI):
 # Create the FastAPI app instance
 app = FastAPI(lifespan=lifespan)
 
+# Configure CORS - allows frontend to communicate with backend during development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify exact origins like ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount static files (CSS, JS, etc.) - like serving static assets in web servers
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 # --- Dependency for Database Session ---
 
@@ -68,13 +83,15 @@ def get_session():
 
 # --- API Endpoints ---
 
-# Define a "path operation" for the root URL
+# Serve the main HTML page at root URL
 @app.get("/")
 def read_root():
-    # This function is called when the root URL is requested
-    # FastAPI decorator turns this Python dictionary into a JSON response
+    """Serve the main todo app HTML page.
     
-    return {"message": "Welcome to your To-Do List App!"}
+    FileResponse serves static HTML files - like serving index.html in traditional web servers.
+    This replaces the JSON response with actual web page content.
+    """
+    return FileResponse('static/index.html')
 
 # Define a path operation for an about page
 @app.get("/about")
@@ -150,7 +167,7 @@ def update_todo(
     session.refresh(db_todo_item)
     return db_todo_item
 
-@app.delete("todos/{todo_id}")
+@app.delete("/todos/{todo_id}")
 def delete_todo(
     todo_id: int,
     session: Session = Depends(get_session)

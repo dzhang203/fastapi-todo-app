@@ -57,6 +57,8 @@ body {
 /*
 Container - like matplotlib's tight_layout()
 Centers content and provides consistent margins
+
+NOTE: This .container {} class is what sets the properties of the <div class="container"> in index.html
 */
 .container {
     max-width: 800px;              /* Don't get too wide on large screens */
