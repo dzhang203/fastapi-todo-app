@@ -71,9 +71,8 @@ async function loadTodos() {
         // Update our local state
         todos = todosData;
         
-        // Update the UI to show the todos
-        renderTodos();
-        updateStats();
+        // Apply initial ordering (incomplete first, then completed)
+        reorderTodos();
         
     } catch (error) {
         console.error('❌ Error loading todos:', error);
@@ -103,8 +102,9 @@ async function createTodo(content) {
         
         const newTodo = await response.json();
         
-        // Add to local state and update UI
-        todos.push(newTodo);
+        // Add new todo at the end of incomplete tasks (before completed tasks)
+        const incompleteCount = todos.filter(todo => !todo.completed).length;
+        todos.splice(incompleteCount, 0, newTodo);
         renderTodos();
         updateStats();
         
@@ -120,7 +120,7 @@ async function createTodo(content) {
 }
 
 // Update an existing todo - like requests.put()
-async function updateTodo(todoId, updates) {
+async function updateTodo(todoId, updates, skipRender = false) {
     try {
         const response = await fetch(`${API_BASE_URL}/todos/${todoId}`, {
             method: 'PUT',
@@ -139,9 +139,20 @@ async function updateTodo(todoId, updates) {
         // Update local state - like updating a dictionary in a list
         const index = todos.findIndex(todo => todo.id === todoId);
         if (index !== -1) {
+            // Preserve frontend-specific fields like originalPosition before updating
+            const originalPosition = todos[index].originalPosition;
             todos[index] = updatedTodo;
-            renderTodos();
-            updateStats();
+            
+            // Restore frontend-specific fields
+            if (originalPosition !== undefined) {
+                todos[index].originalPosition = originalPosition;
+            }
+            
+            // Only render if not skipping (when called from completion toggle, we skip to avoid double rendering)
+            if (!skipRender) {
+                renderTodos();
+                updateStats();
+            }
         }
         
         return updatedTodo;
@@ -211,12 +222,36 @@ async function handleAddTodo(event) {
 // Handle checkbox toggle for completing todos
 async function handleToggleComplete(todoId, completed) {
     try {
-        await updateTodo(todoId, { completed: completed });
+        const todoIndex = todos.findIndex(todo => todo.id === parseInt(todoId));
+        const todo = todos[todoIndex];
+        
+        if (!todo) return;
+        
+        // If marking as complete, store the position among INCOMPLETE tasks only
+        if (completed) {
+            // Count how many incomplete tasks come before this one
+            const incompleteBefore = todos.slice(0, todoIndex).filter(t => !t.completed).length;
+            todo.originalPosition = incompleteBefore;
+            console.log(`Marking task "${todo.content}" complete. Original position among incomplete: ${incompleteBefore}`);
+        }
+        
+        // Update the todo in backend (skip rendering since reorderTodos will handle it)
+        await updateTodo(todoId, { completed: completed }, true);
+        
+        // Reorder todos after successful update
+        reorderTodos();
+        
     } catch (error) {
         // Revert the checkbox if the update failed
-        const checkbox = document.querySelector(`[data-todo-id="${todoId}"] .todo-checkbox`);
-        if (checkbox) {
-            checkbox.checked = !completed;
+        const completionIcon = document.querySelector(`[data-todo-id="${todoId}"] .completion-icon`);
+        if (completionIcon) {
+            // Revert the visual state
+            const todoItem = completionIcon.closest('.todo-item');
+            if (completed) {
+                todoItem.classList.remove('completed');
+            } else {
+                todoItem.classList.add('completed');
+            }
         }
     }
 }
@@ -316,6 +351,57 @@ async function handleDeleteTodo(todoId) {
     if (confirmed) {
         await deleteTodo(todoId);
     }
+}
+
+/*
+TODO REORDERING FUNCTION
+Implements smart task ordering: incomplete tasks first, then completed tasks
+When marking complete: moves to top of completed section
+When marking incomplete: restores to original position
+*/
+
+function reorderTodos() {
+    // Create arrays to track todos by status
+    let incomplete = [];
+    let completed = [];
+    let toRestore = []; // Tasks that need to be restored to specific positions
+    
+    // Separate todos and identify those that need position restoration
+    todos.forEach(todo => {
+        if (todo.completed) {
+            completed.push(todo);
+        } else {
+            // If this todo has an originalPosition, it needs to be restored
+            if (todo.originalPosition !== undefined) {
+                toRestore.push({
+                    todo: todo,
+                    targetPosition: todo.originalPosition
+                });
+                delete todo.originalPosition;
+            } else {
+                incomplete.push(todo);
+            }
+        }
+    });
+    
+    // Insert restored todos back into their original positions
+    toRestore.forEach(({ todo, targetPosition }) => {
+        // Insert at the correct position among incomplete tasks
+        incomplete.splice(targetPosition, 0, todo);
+    });
+    
+    // Sort completed todos by most recently completed first
+    completed.sort((a, b) => {
+        // For now, maintain the order they were completed
+        return 0;
+    });
+    
+    // Combine: incomplete tasks first, then completed tasks
+    todos = [...incomplete, ...completed];
+    
+    // Re-render the UI with new order
+    renderTodos();
+    updateStats();
 }
 
 /*
